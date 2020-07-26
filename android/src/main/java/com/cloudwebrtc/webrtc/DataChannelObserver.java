@@ -24,7 +24,7 @@ class DataChannelObserver implements DataChannel.Observer, EventChannel.StreamHa
         this.eventChannel =
                 new EventChannel(
                         plugin.registrar().messenger(),
-                        "FlutterWebRTC/dataChannelEvent" + String.valueOf(id));
+                        "FlutterWebRTC/dataChannelEvent" + peerConnectionId + id);
         eventChannel.setStreamHandler(this);
     }
 
