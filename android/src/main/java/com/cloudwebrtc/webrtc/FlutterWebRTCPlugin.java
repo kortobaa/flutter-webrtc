@@ -122,7 +122,7 @@ public class FlutterWebRTCPlugin implements MethodCallHandler {
                 .setVideoEncoderFactory(new DefaultVideoEncoderFactory(eglContext, false, true))
                 .setVideoDecoderFactory(new DefaultVideoDecoderFactory(eglContext))
                 .setAudioDeviceModule(audioDeviceModule).createPeerConnectionFactory();
-        
+
     }
 
     private void startAudioManager() {
