@@ -1,71 +1,51 @@
 package com.cloudwebrtc.webrtc;
 
-import java.io.UnsupportedEncodingException;
-import java.nio.ByteBuffer;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-
-import android.util.Base64;
 import android.util.Log;
 import android.util.SparseArray;
 import androidx.annotation.Nullable;
-
 import com.cloudwebrtc.webrtc.utils.AnyThreadSink;
 import com.cloudwebrtc.webrtc.utils.ConstraintsArray;
 import com.cloudwebrtc.webrtc.utils.ConstraintsMap;
-
+import io.flutter.plugin.common.BinaryMessenger;
+import io.flutter.plugin.common.EventChannel;
+import io.flutter.plugin.common.MethodChannel.Result;
+import java.nio.ByteBuffer;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 import org.webrtc.AudioTrack;
 import org.webrtc.DataChannel;
-import org.webrtc.DtmfSender;
 import org.webrtc.IceCandidate;
 import org.webrtc.MediaStream;
 import org.webrtc.MediaStreamTrack;
 import org.webrtc.PeerConnection;
-import org.webrtc.RtpParameters;
 import org.webrtc.RtpReceiver;
-import org.webrtc.RtpSender;
-import org.webrtc.RtpTransceiver;
 import org.webrtc.StatsObserver;
 import org.webrtc.StatsReport;
 import org.webrtc.VideoTrack;
 
-import io.flutter.plugin.common.EventChannel;
-import io.flutter.plugin.common.MethodChannel.Result;
-
 class PeerConnectionObserver implements PeerConnection.Observer, EventChannel.StreamHandler {
+
     private final static String TAG = FlutterWebRTCPlugin.TAG;
 
-    private final SparseArray<DataChannel> dataChannels
-        = new SparseArray<DataChannel>();
+    private final SparseArray<DataChannel> dataChannels = new SparseArray<>();
+    private BinaryMessenger messenger;
     private final String id;
     private PeerConnection peerConnection;
-    final Map<String, MediaStream> remoteStreams;
-    final Map<String, MediaStreamTrack> remoteTracks;
-    final Map<String, RtpTransceiver> transceivers;
-    final Map<String, RtpSender> senders;
-    final Map<String, RtpReceiver> receivers;
-    private final FlutterWebRTCPlugin plugin;
+    final Map<String, MediaStream> remoteStreams = new HashMap<>();
+    final Map<String, MediaStreamTrack> remoteTracks = new HashMap<>();
+    private final StateProvider stateProvider;
 
-    EventChannel eventChannel;
-    EventChannel.EventSink eventSink;
+    private final EventChannel eventChannel;
+    private EventChannel.EventSink eventSink;
 
-    PeerConnectionObserver(FlutterWebRTCPlugin plugin, String id) {
-        this.plugin = plugin;
+    PeerConnectionObserver(StateProvider stateProvider, BinaryMessenger messenger, String id) {
+        this.stateProvider = stateProvider;
+        this.messenger = messenger;
         this.id = id;
-        this.remoteStreams = new HashMap<String, MediaStream>();
-        this.remoteTracks = new HashMap<String, MediaStreamTrack>();
-        this.transceivers = new HashMap<String, RtpTransceiver>();
-        this.senders = new HashMap<String, RtpSender>();
-        this.receivers = new HashMap<String, RtpReceiver>();
 
-        this.eventChannel =
-                new EventChannel(
-                        plugin.registrar().messenger(),
-                        "FlutterWebRTC/peerConnectoinEvent" + id);
+        eventChannel = new EventChannel(messenger, "FlutterWebRTC/peerConnectoinEvent" + id);
         eventChannel.setStreamHandler(this);
-        this.eventSink = null;
     }
 
     @Override
@@ -91,12 +71,9 @@ class PeerConnectionObserver implements PeerConnection.Observer, EventChannel.St
         remoteStreams.clear();
         remoteTracks.clear();
         dataChannels.clear();
-        transceivers.clear();
-        senders.clear();
-        receivers.clear();
     }
 
-    void  dispose() {
+    void dispose() {
         this.close();
         peerConnection.dispose();
         eventChannel.setStreamHandler(null);
@@ -138,7 +115,7 @@ class PeerConnectionObserver implements PeerConnection.Observer, EventChannel.St
             params.putInt("id", dataChannel.id());
             params.putString("label", dataChannel.label());
             result.success(params.toMap());
-        }else{
+        } else {
             result.error("createDataChannel",
                     "Can't create data-channel for id: " + dataChannelId,
                     null);
@@ -169,7 +146,7 @@ class PeerConnectionObserver implements PeerConnection.Observer, EventChannel.St
         MediaStreamTrack track = null;
         if (trackId == null
                 || trackId.isEmpty()
-                || (track = plugin.localTracks.get(trackId)) != null
+                || (track = stateProvider.getLocalTracks().get(trackId)) != null
                 || (track = remoteTracks.get(trackId)) != null) {
             peerConnection.getStats(
                     new StatsObserver() {
@@ -215,7 +192,7 @@ class PeerConnectionObserver implements PeerConnection.Observer, EventChannel.St
 
     @Override
     public void onIceCandidate(final IceCandidate candidate) {
-        Log.d(TAG, "onIceCandidate => " + candidate.toString());
+        Log.d(TAG, "onIceCandidate");
         ConstraintsMap params = new ConstraintsMap();
         params.putString("event", "onCandidate");
         ConstraintsMap candidateParams = new ConstraintsMap();
@@ -254,8 +231,8 @@ class PeerConnectionObserver implements PeerConnection.Observer, EventChannel.St
 
     private String getUIDForStream(MediaStream mediaStream) {
         for (Iterator<Map.Entry<String, MediaStream>> i
-                    = remoteStreams.entrySet().iterator();
-                i.hasNext();) {
+             = remoteStreams.entrySet().iterator();
+             i.hasNext(); ) {
             Map.Entry<String, MediaStream> e = i.next();
             if (e.getValue().equals(mediaStream)) {
                 return e.getKey();
@@ -281,8 +258,8 @@ class PeerConnectionObserver implements PeerConnection.Observer, EventChannel.St
             }
         }
 
-        if (streamUID == null){
-            streamUID = plugin.getNextStreamUUID();
+        if (streamUID == null) {
+            streamUID = stateProvider.getNextStreamUUID();
             remoteStreams.put(streamId, mediaStream);
         }
 
@@ -331,8 +308,9 @@ class PeerConnectionObserver implements PeerConnection.Observer, EventChannel.St
 
 
     void sendEvent(ConstraintsMap event) {
-        if(eventSink != null )
+        if (eventSink != null) {
             eventSink.success(event.toMap());
+        }
     }
 
     @Override
@@ -355,7 +333,7 @@ class PeerConnectionObserver implements PeerConnection.Observer, EventChannel.St
     }
 
     @Override
-    public void onAddTrack(RtpReceiver receiver, MediaStream[] mediaStreams){
+    public void onAddTrack(RtpReceiver receiver, MediaStream[] mediaStreams) {
         Log.d(TAG, "onAddTrack");
         for (MediaStream stream : mediaStreams) {
             String streamId = stream.getId();
@@ -377,6 +355,7 @@ class PeerConnectionObserver implements PeerConnection.Observer, EventChannel.St
             sendEvent(params);
         }
     }
+
     @Override
     public void onDataChannel(DataChannel dataChannel) {
         // XXX Unfortunately, the Java WebRTC API doesn't expose the id
@@ -400,7 +379,7 @@ class PeerConnectionObserver implements PeerConnection.Observer, EventChannel.St
             }
         }
         if (-1 == dataChannelId) {
-          return;
+            return;
         }
         ConstraintsMap params = new ConstraintsMap();
         params.putString("event", "didOpenDataChannel");
@@ -418,7 +397,7 @@ class PeerConnectionObserver implements PeerConnection.Observer, EventChannel.St
         // unregister, so the observer is registered here and is never
         // unregistered
         dataChannel.registerObserver(
-            new DataChannelObserver(plugin, id, dcId, dataChannel));
+                new DataChannelObserver(messenger, id, dcId, dataChannel));
     }
 
     @Override
@@ -487,216 +466,5 @@ class PeerConnectionObserver implements PeerConnection.Observer, EventChannel.St
                 return "closed";
         }
         return null;
-    }
-
-    @Nullable
-    private String transceiverDirectionString(RtpTransceiver.RtpTransceiverDirection direction) {
-        switch (direction) {
-            case SEND_RECV:
-                return "sendrecv";
-            case SEND_ONLY:
-                return "sendonly";
-            case RECV_ONLY:
-                return "recvonly";
-            case INACTIVE:
-                return "inactive";
-        }
-        return null;
-    }
-
-    private RtpTransceiver.RtpTransceiverDirection typStringToTransceiverDirection(String direction) {
-        switch (direction) {
-            case "sendrecv":
-                return RtpTransceiver.RtpTransceiverDirection.SEND_RECV;
-            case "sendonly":
-                return RtpTransceiver.RtpTransceiverDirection.SEND_ONLY;
-            case "recvonly":
-                return RtpTransceiver.RtpTransceiverDirection.RECV_ONLY;
-            case "inactive":
-                return RtpTransceiver.RtpTransceiverDirection.INACTIVE;
-        }
-        return RtpTransceiver.RtpTransceiverDirection.INACTIVE;
-    }
-
-    private Map<String, Object> rtpParametersToMap(RtpParameters rtpParameters){
-        ConstraintsMap info = new ConstraintsMap();
-        info.putString("transactionId", rtpParameters.transactionId);
-
-        ConstraintsMap rtcp = new ConstraintsMap();
-        rtcp.putString("cname", rtpParameters.getRtcp().getCname());
-        rtcp.putBoolean("reducedSize",  rtpParameters.getRtcp().getReducedSize());
-        info.putMap("rtcp", rtcp.toMap());
-
-        ConstraintsArray headerExtensions = new ConstraintsArray();
-        for(RtpParameters.HeaderExtension extension : rtpParameters.getHeaderExtensions()){
-            ConstraintsMap map = new ConstraintsMap();
-            map.putString("uri",extension.getUri());
-            map.putInt("id", extension.getId());
-            map.putBoolean("encrypted", extension.getEncrypted());
-            headerExtensions.pushMap(map);
-        }
-        info.putArray("headerExtensions", headerExtensions.toArrayList());
-
-        ConstraintsArray encodings = new ConstraintsArray();
-        for(RtpParameters.Encoding encoding : rtpParameters.encodings){
-            ConstraintsMap map = new ConstraintsMap();
-            map.putBoolean("active",encoding.active);
-            if (encoding.maxBitrateBps != null) {
-                map.putInt("maxBitrateBps", encoding.maxBitrateBps);
-            }
-            if (encoding.minBitrateBps != null) {
-                map.putInt("minBitrateBps", encoding.minBitrateBps);
-            }
-            if (encoding.maxFramerate != null) {
-                map.putInt("maxFramerate", encoding.maxFramerate);
-            }
-            if (encoding.numTemporalLayers != null) {
-                map.putInt("numTemporalLayers", encoding.numTemporalLayers);
-            }
-            if (encoding.scaleResolutionDownBy != null) {
-                map.putDouble("scaleResolutionDownBy", encoding.scaleResolutionDownBy);
-            }
-            map.putLong("ssrc", encoding.ssrc);
-            encodings.pushMap(map);
-        }
-        info.putArray("encodings", encodings.toArrayList());
-
-        ConstraintsArray codecs = new ConstraintsArray();
-        for(RtpParameters.Codec codec : rtpParameters.codecs){
-            ConstraintsMap map = new ConstraintsMap();
-            map.putString("name",codec.name);
-            map.putInt("payloadType", codec.payloadType);
-            map.putInt("clockRate", codec.clockRate);
-            map.putInt("numChannels", codec.numChannels);
-            map.putMap("numTemporalLayers", new HashMap<String, Object>(codec.parameters));
-            //map.putString("kind", codec.kind);
-            codecs.pushMap(map);
-        }
-
-        info.putArray("codecs", codecs.toArrayList());
-        return info.toMap();
-    }
-
-    @Nullable
-    private Map<String, Object> mediaTrackToMap(MediaStreamTrack track){
-        ConstraintsMap info = new ConstraintsMap();
-        if(track != null){
-            info.putString("trackId", track.id());
-            info.putString("label",track.id());
-            info.putString("kind",track.kind());
-            info.putBoolean("enabled", track.enabled());
-        }
-        return info.toMap();
-    }
-
-    private Map<String, Object> dtmfSenderToMap(DtmfSender dtmfSender, String id){
-        ConstraintsMap info = new ConstraintsMap();
-        info.putString("dtmfSenderId",id);
-        if (dtmfSender != null) {
-            info.putInt("interToneGap", dtmfSender.interToneGap());
-            info.putInt("duration", dtmfSender.duration());
-        }
-        return info.toMap();
-    }
-
-    private Map<String, Object> rtpSenderToMap(RtpSender sender){
-        ConstraintsMap info = new ConstraintsMap();
-        info.putString("senderId", sender.id());
-        info.putBoolean("ownsTrack", true);
-        info.putMap("dtmfSender", dtmfSenderToMap(sender.dtmf(), sender.id()));
-        info.putMap("rtpParameters", rtpParametersToMap(sender.getParameters()));
-        info.putMap("track", mediaTrackToMap(sender.track()));
-        return info.toMap();
-    }
-
-    private Map<String, Object> rtpReceiverToMap(RtpReceiver receiver){
-        ConstraintsMap info = new ConstraintsMap();
-        info.putString("receiverId", receiver.id());
-        info.putMap("rtpParameters", rtpParametersToMap(receiver.getParameters()));
-        info.putMap("track", mediaTrackToMap(receiver.track()));
-        return info.toMap();
-    }
-
-    Map<String, Object> transceiverToMap(RtpTransceiver transceiver){
-        ConstraintsMap info = new ConstraintsMap();
-        info.putString("transceiverId", transceiver.getMid());
-        info.putString("mid", transceiver.getMid());
-        info.putString("direction", transceiverDirectionString(transceiver.getDirection()));
-        info.putMap("sender", rtpSenderToMap(transceiver.getSender()));
-        info.putMap("receiver", rtpReceiverToMap(transceiver.getReceiver()));
-        return info.toMap();
-    }
-
-    @Override
-    public void onTrack(RtpTransceiver transceiver) {
-        ConstraintsMap params = new ConstraintsMap();
-        params.putString("event", "onTrack");
-        params.putMap("transceiver", transceiverToMap(transceiver));
-        sendEvent(params);
-    }
-
-    public void createSender(String kind, String streamId, Result result){
-        RtpSender sender = peerConnection.createSender(kind, streamId);
-        senders.put(sender.id(),sender);
-        result.success(rtpSenderToMap(sender));
-    }
-
-    public void closeSender(String senderId, Result result) {
-        RtpSender sender = senders.get(senderId);
-        sender.dispose();
-        Map<String, Object> params = new HashMap<>();
-        params.put("result", true);
-        result.success(params);
-    }
-
-    public void addTrack(MediaStreamTrack track, List<String> streamIds, Result result){
-        RtpSender sender = peerConnection.addTrack(track, streamIds);
-        senders.put(sender.id(),sender);
-        result.success(rtpSenderToMap(sender));
-    }
-
-    public void removeTrack(String senderId, Result result){
-        RtpSender sender = senders.get(senderId);
-        if(sender == null){
-            result.error("removeTrack", "removeTrack() sender is null", null);
-            return;
-        }
-        boolean res = peerConnection.removeTrack(sender);
-        Map<String, Object> params = new HashMap<>();
-        params.put("result", res);
-        result.success(params);
-    }
-
-    public void addTransceiver(MediaStreamTrack track, Map<String, Object> transceiverInit,  Result result) {
-        RtpTransceiver  transceiver;
-        if(transceiverInit != null){
-            List<String> streamIds =  (List)transceiverInit.get("streamIds");
-            String direction = (String)transceiverInit.get("direction");
-            RtpTransceiver.RtpTransceiverInit init = new RtpTransceiver.RtpTransceiverInit(typStringToTransceiverDirection(direction) ,streamIds);
-            transceiver = peerConnection.addTransceiver(track, init);
-        } else {
-            transceiver = peerConnection.addTransceiver(track);
-        }
-        transceivers.put(transceiver.getMid(), transceiver);
-        result.success(transceiverToMap(transceiver));
-    }
-
-    public void addTransceiverOfType(String mediaType, Map<String, Object> transceiverInit,  Result result) {
-        MediaStreamTrack.MediaType type = MediaStreamTrack.MediaType.MEDIA_TYPE_AUDIO;
-        if(mediaType == "audio")
-            type = MediaStreamTrack.MediaType.MEDIA_TYPE_AUDIO;
-        else if(mediaType == "video")
-            type = MediaStreamTrack.MediaType.MEDIA_TYPE_VIDEO;
-        RtpTransceiver  transceiver;
-        if(transceiverInit != null){
-            List<String> streamIds =  (List)transceiverInit.get("streamIds");
-            String direction = (String)transceiverInit.get("direction");
-            RtpTransceiver.RtpTransceiverInit init = new RtpTransceiver.RtpTransceiverInit(typStringToTransceiverDirection(direction) ,streamIds);
-            transceiver = peerConnection.addTransceiver(type, init);
-        } else {
-            transceiver = peerConnection.addTransceiver(type);
-        }
-        transceivers.put(transceiver.getMid(), transceiver);
-        result.success(transceiverToMap(transceiver));
     }
 }

@@ -5,40 +5,32 @@ import android.app.Fragment;
 import android.app.FragmentTransaction;
 import android.content.pm.PackageManager;
 import android.os.Build;
+import android.os.Build.VERSION_CODES;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.ResultReceiver;
-
-import com.cloudwebrtc.webrtc.FlutterWebRTCPlugin;
-
+import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import java.util.ArrayList;
 
-/**
- * Helper module for dealing with dynamic permissions, introduced in Android M
- * (API level 23).
- */
+/** Helper module for dealing with dynamic permissions, introduced in Android M (API level 23). */
 public class PermissionUtils {
     /**
-     * Constants for internal fields in the <tt>Bundle</tt> exchanged between
-     * the activity requesting the permissions and the auxiliary activity we
-     * spawn for this purpose.
+     * Constants for internal fields in the <tt>Bundle</tt> exchanged between the activity requesting
+     * the permissions and the auxiliary activity we spawn for this purpose.
      */
     private static final String GRANT_RESULTS = "GRANT_RESULT";
+
     private static final String PERMISSIONS = "PERMISSION";
     private static final String REQUEST_CODE = "REQUEST_CODE";
     private static final String RESULT_RECEIVER = "RESULT_RECEIVER";
 
-    /**
-     * Incrementing counter for permission requests. Each request must have a
-     * unique numeric code.
-     */
+    /** Incrementing counter for permission requests. Each request must have a unique numeric code. */
     private static int requestCode;
 
     private static void requestPermissions(
-            FlutterWebRTCPlugin plugin,
-            String[] permissions,
-            ResultReceiver resultReceiver) {
+            Activity activity, String[] permissions, ResultReceiver resultReceiver) {
         // Ask the Context whether we have already been granted the requested
         // permissions.
         int size = permissions.length;
@@ -50,8 +42,7 @@ public class PermissionUtils {
             // No need to ask for permission on pre-Marshmallow
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M)
                 grantResult = PackageManager.PERMISSION_GRANTED;
-            else
-                grantResult = plugin.getContext().checkSelfPermission(permissions[i]);
+            else grantResult = activity.checkSelfPermission(permissions[i]);
 
             grantResults[i] = grantResult;
             if (grantResult != PackageManager.PERMISSION_GRANTED) {
@@ -73,15 +64,8 @@ public class PermissionUtils {
                 // must still use old permissions model, regardless of the
                 // Android version on the device.
                 || Build.VERSION.SDK_INT < Build.VERSION_CODES.M
-                || plugin.getActivity().getApplicationInfo().targetSdkVersion
-                    < Build.VERSION_CODES.M) {
+                || activity.getApplicationInfo().targetSdkVersion < Build.VERSION_CODES.M) {
             send(resultReceiver, requestCode, permissions, grantResults);
-            return;
-        }
-
-        Activity activity = plugin.getActivity();
-
-        if (activity == null) {
             return;
         }
 
@@ -92,12 +76,12 @@ public class PermissionUtils {
 
         RequestPermissionsFragment fragment = new RequestPermissionsFragment();
         fragment.setArguments(args);
-        fragment.setPlugin(plugin);
 
-        FragmentTransaction transaction
-            = activity.getFragmentManager().beginTransaction().add(
-                fragment,
-                fragment.getClass().getName() + "-" + requestCode);
+        FragmentTransaction transaction =
+                activity
+                        .getFragmentManager()
+                        .beginTransaction()
+                        .add(fragment, fragment.getClass().getName() + "-" + requestCode);
 
         try {
             transaction.commit();
@@ -108,29 +92,21 @@ public class PermissionUtils {
     }
 
     public static void requestPermissions(
-            final FlutterWebRTCPlugin plugin,
-            final String[] permissions,
-            final Callback callback) {
+            final Activity activity, final String[] permissions, final Callback callback) {
         requestPermissions(
-            plugin,
-            permissions,
-            new ResultReceiver(new Handler(Looper.getMainLooper())) {
-                @Override
-                protected void onReceiveResult(
-                        int resultCode,
-                        Bundle resultData) {
-                    callback.invoke(
-                        resultData.getStringArray(PERMISSIONS),
-                        resultData.getIntArray(GRANT_RESULTS));
-                }
-            });
+                activity,
+                permissions,
+                new ResultReceiver(new Handler(Looper.getMainLooper())) {
+                    @Override
+                    protected void onReceiveResult(int resultCode, Bundle resultData) {
+                        callback.invoke(
+                                resultData.getStringArray(PERMISSIONS), resultData.getIntArray(GRANT_RESULTS));
+                    }
+                });
     }
 
     private static void send(
-            ResultReceiver resultReceiver,
-            int requestCode,
-            String[] permissions,
-            int[] grantResults) {
+            ResultReceiver resultReceiver, int requestCode, String[] permissions, int[] grantResults) {
         Bundle resultData = new Bundle();
         resultData.putStringArray(PERMISSIONS, permissions);
         resultData.putIntArray(GRANT_RESULTS, grantResults);
@@ -143,18 +119,13 @@ public class PermissionUtils {
     }
 
     /**
-     * Helper activity for requesting permissions. Android only allows
-     * requesting permissions from an activity and the result is reported in the
-     * <tt>onRequestPermissionsResult</tt> method. Since this package is a
-     * library we create an auxiliary activity and communicate back the results
+     * Helper activity for requesting permissions. Android only allows requesting permissions from an
+     * activity and the result is reported in the <tt>onRequestPermissionsResult</tt> method. Since
+     * this package is a library we create an auxiliary activity and communicate back the results
      * using a <tt>ResultReceiver</tt>.
      */
+    @RequiresApi(api = VERSION_CODES.M)
     public static class RequestPermissionsFragment extends Fragment {
-        private FlutterWebRTCPlugin plugin;
-
-        public void setPlugin(FlutterWebRTCPlugin plugin){
-            this.plugin = plugin;
-        }
         private void checkSelfPermissions(boolean requestPermissions) {
             // Figure out which of the requested permissions are actually denied
             // because we do not want to ask about the granted permissions
@@ -172,8 +143,7 @@ public class PermissionUtils {
                 // No need to ask for permission on pre-Marshmallow
                 if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M)
                     grantResult = PackageManager.PERMISSION_GRANTED;
-                else
-                    grantResult = activity.checkSelfPermission(permission);
+                else grantResult = activity.checkSelfPermission(permission);
 
                 grantResults[i] = grantResult;
                 if (grantResult != PackageManager.PERMISSION_GRANTED) {
@@ -187,17 +157,11 @@ public class PermissionUtils {
                 // All permissions have already been granted or we cannot ask
                 // the user about the denied ones.
                 finish();
-                send(
-                        args.getParcelable(RESULT_RECEIVER),
-                    requestCode,
-                    permissions,
-                    grantResults);
+                send(args.getParcelable(RESULT_RECEIVER), requestCode, permissions, grantResults);
             } else {
                 // Ask the user about the denied permissions.
                 requestPermissions(
-                    deniedPermissions.toArray(
-                        new String[deniedPermissions.size()]),
-                    requestCode);
+                        deniedPermissions.toArray(new String[deniedPermissions.size()]), requestCode);
             }
         }
 
@@ -205,17 +169,13 @@ public class PermissionUtils {
             Activity activity = getActivity();
 
             if (activity != null) {
-                activity.getFragmentManager().beginTransaction()
-                    .remove(this)
-                    .commitAllowingStateLoss();
+                activity.getFragmentManager().beginTransaction().remove(this).commitAllowingStateLoss();
             }
         }
 
         @Override
         public void onRequestPermissionsResult(
-                int requestCode,
-                String[] permissions,
-                int[] grantResults) {
+                int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
             Bundle args = getArguments();
 
             if (args.getInt(REQUEST_CODE, 0) != requestCode) {
@@ -231,9 +191,9 @@ public class PermissionUtils {
                 // the invocation so we have to redo the permission request.
                 finish();
                 PermissionUtils.requestPermissions(
-                    plugin,
-                    args.getStringArray(PERMISSIONS),
-                    (ResultReceiver) args.getParcelable(RESULT_RECEIVER));
+                        getActivity(),
+                        args.getStringArray(PERMISSIONS),
+                        (ResultReceiver) args.getParcelable(RESULT_RECEIVER));
             } else {
                 // We did not ask for all requested permissions, just the denied
                 // ones. But when we send the result, we have to answer about

@@ -54,11 +54,10 @@ public class MediaRecorderImpl {
 
     public File getRecordFile() { return recordFile; }
 
-    public void stopRecording(MethodChannel.Result result) {
+    public void stopRecording() {
         isRunning = false;
         if (audioInterceptor != null)
             audioInterceptor.detachCallback(id);
-            audioFileRenderer.release(result);
             audioFileRenderer = null;
         if (videoTrack != null && videoFileRenderer != null) {
             videoTrack.removeSink(videoFileRenderer);
