@@ -71,6 +71,8 @@ class RTCPeerConnection {
         .listen(eventListener, onError: errorListener);
   }
 
+  String get id => _peerConnectionId;
+
   Map<String, dynamic> get configuration => _configuration;
 
   RTCSignalingState get signalingState => _signalingState;
@@ -176,8 +178,12 @@ class RTCPeerConnection {
 
       /// Unified-Plan
       case 'onTrack':
-        if (this.onTrack != null)
-          this.onTrack(RTCRtpTransceiver.fromMap(map['transceiver']));
+        final RTCRtpTransceiver transceiver =
+            RTCRtpTransceiver.fromMap(map['transceiver']);
+        _transceivers.add(transceiver);
+        if (this.onTrack != null) {
+          this.onTrack(transceiver);
+        }
         break;
     }
   }
@@ -375,13 +381,13 @@ class RTCPeerConnection {
   }
 
   Future<RTCRtpSender> addTrack(MediaStreamTrack track,
-      [List<String> streamIds]) async {
+      [List<MediaStream> streams]) async {
     try {
       final Map<dynamic, dynamic> response =
           await _channel.invokeMethod('addTrack', <String, dynamic>{
         'peerConnectionId': this._peerConnectionId,
         'trackId': track.id,
-        'streamIds': streamIds
+        'streamIds': streams.map((e) => e.id).toList()
       });
       RTCRtpSender sender = RTCRtpSender.fromMap(response);
       _senders.add(sender);

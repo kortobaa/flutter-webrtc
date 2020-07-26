@@ -8,8 +8,10 @@ import 'media_stream_track.dart';
 import 'rtc_data_channel.dart';
 import 'rtc_ice_candidate.dart';
 import 'rtc_session_description.dart';
+import 'rtc_rtp_sender.dart';
+import 'rtc_rtp_receiver.dart';
+import 'rtc_rtp_transceiver.dart';
 import '../rtc_stats_report.dart';
-import '../utils.dart';
 import '../enums.dart';
 
 /*
@@ -221,5 +223,70 @@ class RTCPeerConnection {
   Future<Null> close() async {
     _jsPc.close();
     return Future.value();
+  }
+
+  /// Unified-plan stuff
+  List<RTCRtpSender> get senders =>
+      _jsPc.getSenders().map((e) => RTCRtpSender(e));
+
+  List<RTCRtpReceiver> get receivers =>
+      _jsPc.getReceivers().map((e) => RTCRtpReceiver(e));
+
+  List<RTCRtpTransceiver> get transceivers {
+    if (JSUtils.hasProperty(_jsPc, "getTransceivers")) {
+      return JSUtils.callMethod(_jsPc, "getTransceivers", null);
+    }
+    return null;
+  }
+
+  Future<RTCRtpSender> createSender(String kind, String streamId) async {
+    if (JSUtils.hasProperty(_jsPc, "createSender")) {
+      return RTCRtpSender(
+          JSUtils.callMethod(_jsPc, "createSender", [kind, streamId]));
+    }
+    return null;
+  }
+
+  Future<RTCRtpSender> addTrack(MediaStreamTrack track,
+      [List<MediaStream> streams]) async {
+    // TODO: add multiple streams
+    return RTCRtpSender(
+        _jsPc.addTrack(track.jsTrack, streams?.first?.jsStream));
+  }
+
+  Future<bool> removeTrack(RTCRtpSender sender) async {
+    _jsPc.removeTrack(sender.jsSender);
+    return true;
+  }
+
+  Future<bool> closeSender(RTCRtpSender sender) async {
+    if (JSUtils.hasProperty(_jsPc, "closeSender")) {
+      JSUtils.callMethod(_jsPc, "closeSender", [sender.jsSender]);
+    }
+    return null;
+  }
+
+  Future<RTCRtpTransceiver> addTransceiver(MediaStreamTrack track,
+      [RTCRtpTransceiverInit init]) async {
+    if (JSUtils.hasProperty(_jsPc, "addTransceiver")) {
+      final JS.JsObject jsOptions =
+          init != null ? JS.JsObject.jsify(init.toMap()) : null;
+      return RTCRtpTransceiver(JS.JsObject.fromBrowserObject(JSUtils.callMethod(
+          _jsPc, "addTransceiver", [track.jsTrack, jsOptions])));
+    }
+    return null;
+  }
+
+  Future<RTCRtpTransceiver> addTransceiverOfType(RTCRtpMediaType type,
+      [RTCRtpTransceiverInit init]) async {
+    if (JSUtils.hasProperty(_jsPc, "addTransceiver")) {
+      final JS.JsObject jsOptions =
+          init != null ? JS.JsObject.jsify(init.toMap()) : null;
+      return RTCRtpTransceiver(JS.JsObject.fromBrowserObject(JSUtils.callMethod(
+          _jsPc,
+          "addTransceiver",
+          [typeRTCRtpMediaTypeToString[type], jsOptions])));
+    }
+    return null;
   }
 }

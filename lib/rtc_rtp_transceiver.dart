@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/services.dart';
 
 import 'rtc_rtp_parameters.dart';
+import 'media_stream.dart';
 import 'rtc_rtp_sender.dart';
 import 'rtc_rtp_receiver.dart';
 
@@ -32,12 +33,12 @@ final typeRtpTransceiverDirectionToString =
 
 class RTCRtpTransceiverInit {
   RTCRtpTransceiverDirection direction;
-  List<String> streamIds;
+  List<MediaStream> streams;
 
   Map<String, dynamic> toMap() {
     return {
       'direction': typeRtpTransceiverDirectionToString[this.direction],
-      'streamIds': streamIds
+      'streamIds': streams.map((e) => e.id).toList()
     };
   }
 
@@ -46,7 +47,7 @@ class RTCRtpTransceiverInit {
         typeStringToRtpTransceiverDirection[map['direction']],
         map['streamIds']);
   }
-  RTCRtpTransceiverInit(this.direction, this.streamIds);
+  RTCRtpTransceiverInit(this.direction, this.streams);
 }
 
 class RTCRtpTransceiver {
