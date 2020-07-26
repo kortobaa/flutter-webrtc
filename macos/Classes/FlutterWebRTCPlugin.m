@@ -303,7 +303,7 @@
         NSString* peerConnectionId = argsMap[@"peerConnectionId"];
         
         RTCPeerConnection *peerConnection = self.peerConnections[peerConnectionId];
-               if (peerConnection) {
+        if (peerConnection) {
             [peerConnection close];
             [self.peerConnections removeObjectForKey:peerConnectionId];
 

@@ -133,6 +133,8 @@ FlutterRTCAudioRecorder* flutterRTCAudioRecorder;
     NSDictionary *argsMap = call.arguments;
     NSDictionary *constraints = argsMap[@"constraints"];
     [self getDisplayMedia:constraints result:result];
+  } else if ([@"createLocalMediaStream" isEqualToString:call.method]) {
+    [self createLocalMediaStream:result];
   } else if ([@"getSources" isEqualToString:call.method]) {
     [self getSources:result];
   } else if ([@"mediaStreamGetTracks" isEqualToString:call.method]) {
