@@ -525,6 +525,46 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
                 }
                 break;
             }
+            case "createSender": {
+                String peerConnectionId = call.argument("peerConnectionId");
+                String kind = call.argument("kind");
+                String streamId = call.argument("streamId");
+                createSender(peerConnectionId, kind, streamId, result);
+                break;
+            }
+            case "closeSender": {
+                String peerConnectionId = call.argument("peerConnectionId");
+                String senderId = call.argument("senderId");
+                stopSender(peerConnectionId, senderId, result);
+                break;
+            }
+            case "addTrack": {
+                String peerConnectionId = call.argument("peerConnectionId");
+                String trackId = call.argument("trackId");
+                List<String> streamIds = call.argument("streamIds");
+                addTrack(peerConnectionId, trackId, streamIds, result);
+                break;
+            }
+            case "removeTrack":{
+                String peerConnectionId = call.argument("peerConnectionId");
+                String senderId = call.argument("senderId");
+                removeTrack(peerConnectionId, senderId, result);
+                break;
+            }
+            case "addTransceiver": {
+                String peerConnectionId = call.argument("peerConnectionId");
+                String trackId = call.argument("trackId");
+                Map<String, Object> transceiverInit = call.argument("transceiverInit");
+                addTransceiver(peerConnectionId, trackId, transceiverInit, result);
+                break;
+            }
+            case "addTransceiverOfType": {
+                String peerConnectionId = call.argument("peerConnectionId");
+                String mediaType = call.argument("mediaType");
+                Map<String, Object> transceiverInit = call.argument("transceiverInit");
+                addTransceiverOfType(peerConnectionId, mediaType, transceiverInit, result);
+                break;
+            }
             default:
                 result.notImplemented();
                 break;
@@ -1395,6 +1435,81 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
             Log.d(TAG, "dataChannelClose() peerConnection is null");
         } else {
             pco.dataChannelClose(dataChannelId);
+        }
+    }
+
+    private void createSender(String peerConnectionId, String kind, String streamId, Result result) {
+        PeerConnectionObserver pco = mPeerConnectionObservers.get(peerConnectionId);
+        if (pco == null || pco.getPeerConnection() == null) {
+            Log.d(TAG, "createSender() peerConnection is null");
+            result.error("createSender", "createSender() peerConnection is null", null);
+        } else {
+            pco.createSender(kind, streamId, result);
+        }
+    }
+
+
+    private void stopSender(String peerConnectionId, String senderId, Result result) {
+        PeerConnectionObserver pco
+                = mPeerConnectionObservers.get(peerConnectionId);
+        if (pco == null || pco.getPeerConnection() == null) {
+            Log.d(TAG, "removeTrack() peerConnection is null");
+            result.error("removeTrack", "removeTrack() peerConnection is null", null);
+        } else {
+            pco.closeSender(senderId, result);
+        }
+    }
+
+    private void addTrack(String peerConnectionId, String trackId, List<String> streamIds, Result result){
+        PeerConnectionObserver pco
+                = mPeerConnectionObservers.get(peerConnectionId);
+        MediaStreamTrack track = localTracks.get(trackId);
+        if (track == null) {
+            result.error("addTrack", "addTrack() track is null", null);
+            return;
+        }
+        if (pco == null || pco.getPeerConnection() == null) {
+            Log.d(TAG, "addTrack() peerConnection is null");
+            result.error("addTrack", "addTrack() peerConnection is null", null);
+        } else {
+            pco.addTrack(track, streamIds, result);
+        }
+    }
+
+    private void removeTrack(String peerConnectionId, String senderId, Result result) {
+        PeerConnectionObserver pco = mPeerConnectionObservers.get(peerConnectionId);
+        if (pco == null || pco.getPeerConnection() == null) {
+            Log.d(TAG, "removeTrack() peerConnection is null");
+            result.error("removeTrack", "removeTrack() peerConnection is null", null);
+        } else {
+            pco.removeTrack(senderId, result);
+        }
+    }
+
+    private void addTransceiver(String peerConnectionId, String trackId, Map<String, Object> transceiverInit,
+                                Result result) {
+        PeerConnectionObserver pco = mPeerConnectionObservers.get(peerConnectionId);
+        MediaStreamTrack track = localTracks.get(trackId);
+        if (track == null) {
+            result.error("addTransceiver", "addTransceiver() track is null", null);
+            return;
+        }
+        if (pco == null || pco.getPeerConnection() == null) {
+            Log.d(TAG, "addTransceiver() peerConnection is null");
+            result.error("addTransceiver", "addTransceiver() peerConnection is null", null);
+        } else {
+            pco.addTransceiver(track, transceiverInit, result);
+        }
+    }
+
+    private void addTransceiverOfType(String peerConnectionId, String mediaType, Map<String, Object> transceiverInit,
+                                      Result result) {
+        PeerConnectionObserver pco = mPeerConnectionObservers.get(peerConnectionId);
+        if (pco == null || pco.getPeerConnection() == null) {
+            Log.d(TAG, "addTransceiverOfType() peerConnection is null");
+            result.error("addTransceiverOfType", "addTransceiverOfType() peerConnection is null", null);
+        } else {
+            pco.addTransceiverOfType(mediaType, transceiverInit, result);
         }
     }
 
