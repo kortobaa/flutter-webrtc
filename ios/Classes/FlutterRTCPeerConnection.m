@@ -180,11 +180,11 @@
 -(void) peerConnectionClose:(RTCPeerConnection *)peerConnection
 {
     [peerConnection close];
-    
+
     // Clean up peerConnection's streams and tracks
     [peerConnection.remoteStreams removeAllObjects];
     [peerConnection.remoteTracks removeAllObjects];
-    
+
     // Clean up peerConnection's dataChannels.
     NSMutableDictionary<NSString *, RTCDataChannel *> *dataChannels
     = peerConnection.dataChannels;
@@ -208,9 +208,9 @@
         [peerConnection statsForTrack:track
                      statsOutputLevel:RTCStatsOutputLevelStandard
                     completionHandler:^(NSArray<RTCLegacyStatsReport *> *reports) {
-                        
+
                         NSMutableArray *stats = [NSMutableArray array];
-                        
+
                         for (RTCLegacyStatsReport *report in reports) {
                             [stats addObject:@{@"id": report.reportId,
                                                @"type": report.type,
@@ -218,7 +218,7 @@
                                                @"values": report.values
                                                }];
                         }
-                        
+
                         result(@{@"stats": stats});
                     }];
     }else{
@@ -280,7 +280,7 @@
     for (id srcKey in src) {
         id srcValue = src[srcKey];
         NSString *dstValue;
-        
+
         if ([srcValue isKindOfClass:[NSNumber class]]) {
             dstValue = [srcValue boolValue] ? @"true" : @"false";
         } else {
@@ -303,16 +303,16 @@
     id mandatory = constraints[@"mandatory"];
     NSMutableDictionary<NSString *, NSString *> *mandatory_
     = [NSMutableDictionary new];
-    
+
     if ([mandatory isKindOfClass:[NSDictionary class]]) {
         [self parseJavaScriptConstraints:(NSDictionary *)mandatory
                    intoWebRTCConstraints:mandatory_];
     }
-    
+
     id optional = constraints[@"optional"];
     NSMutableDictionary<NSString *, NSString *> *optional_
     = [NSMutableDictionary new];
-    
+
     if ([optional isKindOfClass:[NSArray class]]) {
         for (id o in (NSArray *)optional) {
             if ([o isKindOfClass:[NSDictionary class]]) {
@@ -321,7 +321,7 @@
             }
         }
     }
-    
+
     return [[RTCMediaConstraints alloc] initWithMandatoryConstraints:mandatory_
                                                  optionalConstraints:optional_];
 }
@@ -339,11 +339,11 @@
 
 -(void)peerConnection:(RTCPeerConnection *)peerConnection
           mediaStream:(RTCMediaStream *)stream didAddTrack:(RTCVideoTrack*)track{
-    
+
     peerConnection.remoteTracks[track.trackId] = track;
     NSString *streamId = stream.streamId;
     peerConnection.remoteStreams[streamId] = stream;
-    
+
     FlutterEventSink eventSink = peerConnection.eventSink;
     if(eventSink){
         eventSink(@{
@@ -390,15 +390,15 @@
         peerConnection.remoteTracks[track.trackId] = track;
         [audioTracks addObject:@{@"id": track.trackId, @"kind": track.kind, @"label": track.trackId, @"enabled": @(track.isEnabled), @"remote": @(YES), @"readyState": @"live"}];
     }
-    
+
     for (RTCVideoTrack *track in stream.videoTracks) {
         peerConnection.remoteTracks[track.trackId] = track;
         [videoTracks addObject:@{@"id": track.trackId, @"kind": track.kind, @"label": track.trackId, @"enabled": @(track.isEnabled), @"remote": @(YES), @"readyState": @"live"}];
     }
-    
+
     NSString *streamId = stream.streamId;
     peerConnection.remoteStreams[streamId] = stream;
-    
+
     FlutterEventSink eventSink = peerConnection.eventSink;
     if(eventSink){
         eventSink(@{
@@ -417,7 +417,7 @@
         NSLog(@"didRemoveStream - more than one stream entry found for stream instance with id: %@", stream.streamId);
     }
     NSString *streamId = stream.streamId;
-    
+
     for (RTCVideoTrack *track in stream.videoTracks) {
         [peerConnection.remoteTracks removeObjectForKey:track.trackId];
     }
@@ -425,7 +425,7 @@
         [peerConnection.remoteTracks removeObjectForKey:track.trackId];
     }
     [peerConnection.remoteStreams removeObjectForKey:streamId];
-    
+
     FlutterEventSink eventSink = peerConnection.eventSink;
     if(eventSink){
         eventSink(@{
@@ -481,15 +481,15 @@
     dataChannel.peerConnectionId = peerConnection.flutterId;
     dataChannel.delegate = self;
     peerConnection.dataChannels[dataChannelId] = dataChannel;
-    
+
     FlutterEventChannel *eventChannel = [FlutterEventChannel
                                          eventChannelWithName:[NSString stringWithFormat:@"FlutterWebRTC/dataChannelEvent%1$@%2$d", peerConnection.flutterId, dataChannel.channelId]
                                          binaryMessenger:self.messenger];
-    
+
     dataChannel.eventChannel = eventChannel;
     dataChannel.flutterChannelId = dataChannelId;
     [eventChannel setStreamHandler:dataChannel];
-    
+
     FlutterEventSink eventSink = peerConnection.eventSink;
     if(eventSink){
         eventSink(@{
@@ -501,4 +501,3 @@
 }
 
 @end
-
