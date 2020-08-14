@@ -118,8 +118,7 @@ FlutterRTCAudioRecorder* flutterRTCAudioRecorder;
     /*Create Event Channel.*/
     peerConnection.eventChannel = [FlutterEventChannel
         eventChannelWithName:
-            [NSString stringWithFormat:@"FlutterWebRTC/peerConnectoinEvent%@",
-                                       peerConnectionId]
+            [NSString stringWithFormat:@"FlutterWebRTC/peerConnectoinEvent%@", peerConnectionId]
              binaryMessenger:_messenger];
     [peerConnection.eventChannel setStreamHandler:peerConnection];
 
