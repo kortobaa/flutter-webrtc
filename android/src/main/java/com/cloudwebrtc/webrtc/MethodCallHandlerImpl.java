@@ -630,11 +630,12 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
     }
 
     private RTCConfiguration parseRTCConfiguration(ConstraintsMap map) {
-        ConstraintsArray iceServersArray = null;
-        if (map != null) {
-            iceServersArray = map.getArray("iceServers");
+        List<IceServer> iceServers = new ArrayList<>(0);
+        if (map.hasKey("iceServers")) {
+            ConstraintsArray iceServersArray = map.getArray("iceServers");
+            iceServers = createIceServers(iceServersArray);
         }
-        List<IceServer> iceServers = createIceServers(iceServersArray);
+        
         RTCConfiguration conf = new RTCConfiguration(iceServers);
         if (map == null) {
             return conf;
