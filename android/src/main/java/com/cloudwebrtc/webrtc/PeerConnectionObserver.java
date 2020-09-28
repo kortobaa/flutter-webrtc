@@ -639,6 +639,46 @@ class PeerConnectionObserver implements PeerConnection.Observer, EventChannel.St
       result.success(params);
   }
 
+  public void setVideoMaxBitrate(Integer maxBitrateKbps, Result result){
+    Log.d(TAG, "Requested max video bitrate: " + maxBitrateKbps);
+    RtpSender localVideoSender = null;
+
+    for (RtpSender sender: senders.values()){
+      String trackType = sender.track().kind();
+      if (trackType.equals("video")) {
+        Log.d(TAG, "Found video sender.");
+        localVideoSender = sender;
+      }
+    }
+
+    if (localVideoSender == null) {
+      Log.w(TAG, "Sender is not ready.");
+      result.error("setVideoMaxBitrate", "setVideoMaxBitrate() Sender is not ready", null);
+      return;
+    }
+
+    RtpParameters parameters = localVideoSender.getParameters();
+    if (parameters.encodings.size() == 0) {
+      Log.w(TAG, "RtpParameters are not ready.");
+      result.error("setVideoMaxBitrate", "setVideoMaxBitrate() RtpParameters are not ready.", null);
+      return;
+    }
+
+    for (RtpParameters.Encoding encoding : parameters.encodings) {
+      // Null value means no limit.
+      encoding.maxBitrateBps = maxBitrateKbps == null ? null : maxBitrateKbps * 1000;
+    }
+    if (!localVideoSender.setParameters(parameters)) {
+      Log.e(TAG, "RtpSender.setParameters failed.");
+      result.error("setVideoMaxBitrate", "setVideoMaxBitrate() RtpSender.setParameters failed.", null);
+      return;
+    }
+    Log.d(TAG, "Configured max video bitrate to: " + maxBitrateKbps);
+    Map<String, Object> params = new HashMap<>();
+    params.put("result", true);
+    result.success(params);
+  }
+
   public void addTrack(MediaStreamTrack track, List<String> streamIds, Result result){
       RtpSender sender = peerConnection.addTrack(track, streamIds);
       senders.put(sender.id(),sender);

@@ -477,6 +477,18 @@ class RTCPeerConnection {
     }
   }
 
+  /// Setting local video max bit rate in kbps
+  Future<void> setVideoMaxBitRate(int maxBitRate) async {
+    try {
+      await _channel.invokeMethod('setVideoMaxBitRate', <String, dynamic>{
+        'peerConnectionId': _peerConnectionId,
+        'maxBitRate': maxBitRate,
+      });
+    } on PlatformException catch (e) {
+      throw 'Unable to RTCPeerConnection::addTransceiver: ${e.message}';
+    }
+  }
+
   Future<Null> close() async {
     try {
       await _channel.invokeMethod('peerConnectionClose', <String, dynamic>{

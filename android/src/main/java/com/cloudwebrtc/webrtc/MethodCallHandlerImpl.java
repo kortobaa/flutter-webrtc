@@ -45,6 +45,7 @@ import org.webrtc.PeerConnection.TcpCandidatePolicy;
 import org.webrtc.PeerConnectionFactory;
 import org.webrtc.PeerConnectionFactory.InitializationOptions;
 import org.webrtc.PeerConnectionFactory.Options;
+import org.webrtc.RtpParameters;
 import org.webrtc.RtpSender;
 import org.webrtc.SdpObserver;
 import org.webrtc.SessionDescription;
@@ -597,6 +598,12 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
         Map<String, Object> transceiverInit = call.argument("transceiverInit");
         addTransceiverOfType(peerConnectionId, mediaType, transceiverInit, result);
         break;
+    }
+    case "setVideoMaxBitRate": {
+      String peerConnectionId = call.argument("peerConnectionId");
+      final Integer maxBitRate = call.argument("maxBitRate");
+      setVideoMaxBitrate(peerConnectionId, maxBitRate, result);
+      break;
     }
       default:
         result.notImplemented();
@@ -1548,6 +1555,17 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
         result.error("addTransceiverOfType", "addTransceiverOfType() peerConnection is null", null);
     } else {
         pco.addTransceiverOfType(mediaType, transceiverInit, result);
+    }
+  }
+  
+  private void setVideoMaxBitrate(String peerConnectionId, Integer maxBitrateKbps, Result result) {
+    PeerConnectionObserver pco = mPeerConnectionObservers.get(peerConnectionId);
+    if (pco == null ||  pco.getPeerConnection() == null) {
+      Log.d(TAG, "addTransceiverOfType() peerConnection is null");
+      result.error("setVideoMaxBitrate", "setVideoMaxBitrate() peerConnection is null", null);
+      return;
+    }else {
+      pco.setVideoMaxBitrate(maxBitrateKbps,result);
     }
   }
 
