@@ -88,6 +88,10 @@ public class ConstraintsMap {
     public void putInt(String key, int value) {
         mMap.put(key, value);
     }
+    
+    public void putLong(String key, long value) {
+        mMap.put(key, value);
+    }
 
     public void putString(String key, String value) {
         mMap.put(key, value);
