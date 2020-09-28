@@ -1,6 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter/services.dart';
+import 'package:flutter_webrtc/src/rtc_rtp_transceiver.dart';
+import 'package:flutter_webrtc/src/rtc_rtp_receiver.dart';
+import 'package:flutter_webrtc/src/rtc_rtp_sender.dart';
 
 import 'enums.dart';
 import 'media_stream.dart';
@@ -42,8 +45,11 @@ class RTCPeerConnection {
   final String _peerConnectionId;
   final _channel = WebRTC.methodChannel();
   StreamSubscription<dynamic> _eventSubscription;
-  final _localStreams = <MediaStream>[];
-  final _remoteStreams = <MediaStream>[];
+  final List<MediaStream> _localStreams = <MediaStream>[];
+  final List<MediaStream> _remoteStreams = <MediaStream>[];
+  final List<RTCRtpSender> _senders = <RTCRtpSender>[];
+  final List<RTCRtpReceiver> _receivers = <RTCRtpReceiver>[];
+  final List<RTCRtpTransceiver> _transceivers = <RTCRtpTransceiver>[];
   RTCDataChannel _dataChannel;
   Map<String, dynamic> _configuration;
   RTCSignalingState _signalingState;
@@ -359,6 +365,116 @@ class RTCPeerConnection {
 
   RTCDTMFSender createDtmfSender(MediaStreamTrack track) {
     return RTCDTMFSender(_peerConnectionId);
+  }
+
+  /// Unified-Plan.
+  List<RTCRtpSender> get senders => _senders;
+
+  List<RTCRtpReceiver> get receivers => _receivers;
+
+  List<RTCRtpTransceiver> get transceivers => _transceivers;
+
+  Future<RTCRtpSender> createSender(String kind, String streamId) async {
+    try {
+      final response = await _channel.invokeMethod(
+          'createSender', <String, dynamic>{
+        'peerConnectionId': _peerConnectionId,
+        'kind': kind,
+        'streamId': streamId
+      });
+      final sender = RTCRtpSender.fromMap(response);
+      _senders.add(sender);
+      return sender;
+    } on PlatformException catch (e) {
+      throw 'Unable to RTCPeerConnection::createSender: ${e.message}';
+    }
+  }
+
+  Future<RTCRtpSender> addTrack(MediaStreamTrack track,
+      [List<MediaStream> streams]) async {
+    try {
+      final response =
+          await _channel.invokeMethod('addTrack', <String, dynamic>{
+        'peerConnectionId': _peerConnectionId,
+        'trackId': track.id,
+        'streamIds': streams.map((e) => e.id).toList()
+      });
+      final sender = RTCRtpSender.fromMap(response);
+      _senders.add(sender);
+      return sender;
+    } on PlatformException catch (e) {
+      throw 'Unable to RTCPeerConnection::addTrack: ${e.message}';
+    }
+  }
+
+  Future<bool> removeTrack(RTCRtpSender sender) async {
+    try {
+      final response = await _channel.invokeMethod(
+          'removeTrack', <String, dynamic>{
+        'peerConnectionId': _peerConnectionId,
+        'senderId': sender.senderId
+      });
+      bool result = response['result'];
+      _senders.removeWhere((item) {
+        return sender.senderId == item.senderId;
+      });
+      return result;
+    } on PlatformException catch (e) {
+      throw 'Unable to RTCPeerConnection::removeTrack: ${e.message}';
+    }
+  }
+
+  Future<bool> closeSender(RTCRtpSender sender) async {
+    try {
+      final response = await _channel.invokeMethod(
+          'closeSender', <String, dynamic>{
+        'peerConnectionId': _peerConnectionId,
+        'senderId': sender.senderId
+      });
+      bool result = response['result'];
+      _senders.removeWhere((item) {
+        return sender.senderId == item.senderId;
+      });
+      return result;
+    } on PlatformException catch (e) {
+      throw 'Unable to RTCPeerConnection::removeTrack: ${e.message}';
+    }
+  }
+
+  Future<RTCRtpTransceiver> addTransceiver(MediaStreamTrack track,
+      [RTCRtpTransceiverInit init]) async {
+    try {
+      final response =
+          await _channel.invokeMethod('addTransceiver', <String, dynamic>{
+        'peerConnectionId': _peerConnectionId,
+        'trackId': track.id,
+        'transceiverInit': init?.toMap()
+      });
+      final transceiver = RTCRtpTransceiver.fromMap(response);
+      transceiver.peerConnectionId = _peerConnectionId;
+      _transceivers.add(transceiver);
+      return transceiver;
+    } on PlatformException catch (e) {
+      throw 'Unable to RTCPeerConnection::addTransceiver: ${e.message}';
+    }
+  }
+
+  Future<RTCRtpTransceiver> addTransceiverOfType(RTCRtpMediaType mediaType,
+      [RTCRtpTransceiverInit init]) async {
+    try {
+      final response =
+          await _channel.invokeMethod('addTransceiverOfType', <String, dynamic>{
+        'peerConnectionId': _peerConnectionId,
+        'mediaType': typeRTCRtpMediaTypetoString[mediaType],
+        'transceiverInit': init?.toMap()
+      });
+      final transceiver = RTCRtpTransceiver.fromMap(response);
+      transceiver.peerConnectionId = _peerConnectionId;
+      _transceivers.add(transceiver);
+      return transceiver;
+    } on PlatformException catch (e) {
+      throw 'Unable to RTCPeerConnection::addTransceiver: ${e.message}';
+    }
   }
 
   Future<Null> close() async {
