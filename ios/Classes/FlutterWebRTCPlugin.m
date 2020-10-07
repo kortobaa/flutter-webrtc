@@ -602,10 +602,10 @@
                                        message:[NSString stringWithFormat:@"Error: peerConnection not found!"]
                                        details:nil]);
         }
-    } else if ([@"setVideoMaxBitrate" isEqualToString:call.method]){
+    } else if ([@"setVideoMaxBitRate" isEqualToString:call.method]){
         NSDictionary* argsMap = call.arguments;
         NSString* peerConnectionId = argsMap[@"peerConnectionId"];
-        NSInteger* maxBitRate = argsMap[@"maxBitRate"];
+        NSNumber* maxBitRate = argsMap[@"maxBitRate"];
         RTCPeerConnection *peerConnection = self.peerConnections[peerConnectionId];
         if(peerConnection) {
             RTCRtpSender* localVideoSender = nil ;
@@ -620,7 +620,7 @@
                 RTCRtpParameters* parameters = localVideoSender.parameters;
                 if (parameters.encodings != nil && [parameters.encodings count] != 0) {
                     for (RTCRtpEncodingParameters* encoding in parameters.encodings) {
-                        encoding.maxBitrateBps = maxBitrateKbps == nil ? nil : maxBitrateKbps * 1000;
+                        encoding.maxBitrateBps = maxBitRate == nil ? nil : [maxBitRate intValue]  * 1000;
                     }
                     localVideoSender.parameters = parameters;
                     NSLog(@"SetVideoMaxBitrate: video sender max bitrate was set successfully");
