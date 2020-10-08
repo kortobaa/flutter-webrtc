@@ -605,7 +605,7 @@
     } else if ([@"setVideoMaxBitRate" isEqualToString:call.method]){
         NSDictionary* argsMap = call.arguments;
         NSString* peerConnectionId = argsMap[@"peerConnectionId"];
-        NSNumber* maxBitRate = argsMap[@"maxBitRate"];
+        NSNumber* maxBitRateKbps = argsMap[@"maxBitRate"];
         RTCPeerConnection *peerConnection = self.peerConnections[peerConnectionId];
         if(peerConnection) {
             RTCRtpSender* localVideoSender = nil ;
@@ -620,7 +620,8 @@
                 RTCRtpParameters* parameters = localVideoSender.parameters;
                 if (parameters.encodings != nil && [parameters.encodings count] != 0) {
                     for (RTCRtpEncodingParameters* encoding in parameters.encodings) {
-                        encoding.maxBitrateBps = maxBitRate == nil ? nil : [maxBitRate intValue]  * 1000;
+                        int maxBitRate = [maxBitRateKbps intValue] * 1000;
+                        encoding.maxBitrateBps =[NSNumber numberWithInt:maxBitRate];
                     }
                     localVideoSender.parameters = parameters;
                     NSLog(@"SetVideoMaxBitrate: video sender max bitrate was set successfully");
