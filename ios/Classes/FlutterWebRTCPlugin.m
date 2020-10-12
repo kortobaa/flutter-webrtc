@@ -621,9 +621,9 @@
                 if (parameters.encodings != nil && [parameters.encodings count] != 0) {
                     for (RTCRtpEncodingParameters* encoding in parameters.encodings) {
                         int maxBitRate = [maxBitRateKbps intValue] * 1000;
-                        encoding.maxBitrateBps =[NSNumber numberWithInt:maxBitRate];
+                        encoding.maxBitrateBps = [NSNumber numberWithInt:maxBitRate];
                     }
-                    localVideoSender.parameters = parameters;
+                    [localVideoSender setParameters:parameters];
                     NSLog(@"SetVideoMaxBitrate: video sender max bitrate was set successfully");
                     result(@{@"result": @"success"});
                 }
