@@ -485,7 +485,7 @@ class RTCPeerConnection {
         'maxBitRate': maxBitRate,
       });
     } on PlatformException catch (e) {
-      throw 'Unable to RTCPeerConnection::addTransceiver: ${e.message}';
+      throw 'Unable to RTCPeerConnection::SetVideoMaxBitrate: ${e.message}';
     }
   }
 
