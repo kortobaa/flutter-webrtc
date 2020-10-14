@@ -341,15 +341,13 @@
 -(void)peerConnection:(RTCPeerConnection *)peerConnection didAddReceiver:(RTCRtpReceiver*)receiver streams:(NSArray<RTCMediaStream*>*)mediaStreams {
     
     peerConnection.remoteTracks[receiver.track.trackId] = receiver.track;
-    NSString *streamId;
     if(mediaStreams.count != 0){
-        streamId = mediaStreams[0].streamId;
+        NSString *streamId = mediaStreams[0].streamId;
         peerConnection.remoteStreams[streamId] = mediaStreams[0];
-    }
-    
-    FlutterEventSink eventSink = peerConnection.eventSink;
-    if(eventSink){
-        eventSink(@{
+
+         FlutterEventSink eventSink = peerConnection.eventSink;
+        if(eventSink){
+            eventSink(@{
                     @"event" : @"onAddTrack",
                     @"streamId": streamId,
                     @"trackId": receiver.track.trackId,
@@ -361,6 +359,7 @@
                             @"remote": @(YES),
                             @"readyState": @"live"}
                     });
+        }
     }
 }
 
