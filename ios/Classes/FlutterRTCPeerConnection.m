@@ -14,6 +14,7 @@
 #import <WebRTC/RTCAudioTrack.h>
 #import <WebRTC/RTCVideoTrack.h>
 #import <WebRTC/RTCMediaStream.h>
+#import <WebRTC/RTCRtpReceiver.h>
 
 @implementation RTCPeerConnection (Flutter)
 
@@ -337,24 +338,26 @@
     }
 }
 
--(void)peerConnection:(RTCPeerConnection *)peerConnection
-          mediaStream:(RTCMediaStream *)stream didAddTrack:(RTCVideoTrack*)track{
+-(void)peerConnection:(RTCPeerConnection *)peerConnection didAddReceiver:(RTCRtpReceiver*)receiver streams:(NSArray<RTCMediaStream*>*)mediaStreams {
     
-    peerConnection.remoteTracks[track.trackId] = track;
-    NSString *streamId = stream.streamId;
-    peerConnection.remoteStreams[streamId] = stream;
+    peerConnection.remoteTracks[receiver.track.trackId] = receiver.track;
+    NSString *streamId;
+    if(mediaStreams.count != 0){
+        streamId = mediaStreams[0].streamId;
+        peerConnection.remoteStreams[streamId] = mediaStreams[0];
+    }
     
     FlutterEventSink eventSink = peerConnection.eventSink;
     if(eventSink){
         eventSink(@{
                     @"event" : @"onAddTrack",
                     @"streamId": streamId,
-                    @"trackId": track.trackId,
+                    @"trackId": receiver.track.trackId,
                     @"track": @{
-                            @"id": track.trackId,
-                            @"kind": track.kind,
-                            @"label": track.trackId,
-                            @"enabled": @(track.isEnabled),
+                            @"id": receiver.track.trackId,
+                            @"kind": receiver.track.kind,
+                            @"label": receiver.track.trackId,
+                            @"enabled": @(receiver.track.isEnabled),
                             @"remote": @(YES),
                             @"readyState": @"live"}
                     });
