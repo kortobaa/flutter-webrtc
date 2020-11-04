@@ -851,8 +851,8 @@ class PeerConnectionObserver implements PeerConnection.Observer, EventChannel.St
     List<RtpSender> senders = peerConnection.getSenders();
 
     for (RtpSender sender: senders){
-      String trackType = sender.track().kind();
-      if (trackType.equals("video")) {
+      final MediaStreamTrack track = sender.track();
+      if (track != null && trackType.equals("video")) {
         Log.d(TAG, "Found video sender.");
         localVideoSender = sender;
       }

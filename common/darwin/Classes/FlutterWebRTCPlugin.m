@@ -594,7 +594,7 @@
         if(peerConnection) {
             RTCRtpSender* localVideoSender = nil ;
             for( RTCRtpSender* rtpSender in peerConnection.senders){
-                if([[[rtpSender track] kind] isEqualToString:@"video"]) {
+                if([rtpSender track] != nil && [[[rtpSender track] kind] isEqualToString:@"video"]) {
                     localVideoSender = rtpSender;
                     NSLog(@"SetVideoMaxBitrate: found video sender");
                 }
