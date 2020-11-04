@@ -714,7 +714,7 @@
             details:nil]);
             return;
         }
-        result(@{@"result": [peerConnection removeTrack:sender]});
+        result(@{@"result": @([peerConnection removeTrack:sender])});
     } else if ([@"addTransceiver" isEqualToString:call.method]){
         NSDictionary* argsMap = call.arguments;
         NSString* peerConnectionId = argsMap[@"peerConnectionId"];
