@@ -545,6 +545,8 @@ didStartReceivingOnTransceiver:(RTCRtpTransceiver *)transceiver {
                 }
             }
         }
+        peerConnection.remoteTracks[rtpReceiver.track.trackId] = rtpReceiver.track;
+        peerConnection.remoteStreams[mediaStreams[0].streamId] = mediaStreams[0];
         
         eventSink(event);
     }
