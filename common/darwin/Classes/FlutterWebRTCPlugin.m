@@ -586,6 +586,40 @@
                                        message:[NSString stringWithFormat:@"Error: peerConnection not found!"]
                                        details:nil]);
         }
+    } else if ([@"setVideoMaxBitRate" isEqualToString:call.method]){
+        NSDictionary* argsMap = call.arguments;
+        NSString* peerConnectionId = argsMap[@"peerConnectionId"];
+        NSNumber* maxBitRateKbps = argsMap[@"maxBitRate"];
+        RTCPeerConnection *peerConnection = self.peerConnections[peerConnectionId];
+        if(peerConnection) {
+            RTCRtpSender* localVideoSender = nil ;
+            for( RTCRtpSender* rtpSender in peerConnection.senders){
+                if([[[rtpSender track] kind] isEqualToString:@"video"]) {
+                    localVideoSender = rtpSender;
+                    NSLog(@"SetVideoMaxBitrate: found video sender");
+                }
+            }
+            if(localVideoSender){
+                NSLog(@"SetVideoMaxBitrate: Setting video sender max bitrate");
+                RTCRtpParameters* parameters = localVideoSender.parameters;
+                if (parameters.encodings != nil && [parameters.encodings count] != 0) {
+                    for (RTCRtpEncodingParameters* encoding in parameters.encodings) {
+                        int maxBitRate = [maxBitRateKbps intValue] * 1000;
+                        encoding.maxBitrateBps = [NSNumber numberWithInt:maxBitRate];
+                    }
+                    [localVideoSender setParameters:parameters];
+                    NSLog(@"SetVideoMaxBitrate: video sender max bitrate was set successfully");
+                    result(@{@"result": @"success"});
+                }
+            }
+            result([FlutterError errorWithCode:[NSString stringWithFormat:@"%@Failed",call.method]
+                                        message:[NSString stringWithFormat:@"Error: peerConnection found but failed to set video max bitrate!"]
+                                        details:nil]);
+        } else {
+            result([FlutterError errorWithCode:[NSString stringWithFormat:@"%@Failed",call.method]
+                                        message:[NSString stringWithFormat:@"Error: peerConnection not found!"]
+                                        details:nil]);
+        }
     } else if ([@"setConfiguration" isEqualToString:call.method]){
         NSDictionary* argsMap = call.arguments;
         NSString* peerConnectionId = argsMap[@"peerConnectionId"];

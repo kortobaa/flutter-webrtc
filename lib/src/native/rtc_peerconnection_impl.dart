@@ -537,4 +537,17 @@ class RTCPeerConnectionNative extends RTCPeerConnection {
       throw 'Unable to RTCPeerConnection::addTransceiver: ${e.message}';
     }
   }
+
+  /// Setting local video max bit rate in kbps
+  @override
+  Future<void> setVideoMaxBitRate(int maxBitRate) async {
+    try {
+      await _channel.invokeMethod('setVideoMaxBitRate', <String, dynamic>{
+        'peerConnectionId': _peerConnectionId,
+        'maxBitRate': maxBitRate,
+      });
+    } on PlatformException catch (e) {
+      throw 'Unable to RTCPeerConnection::SetVideoMaxBitrate: ${e.message}';
+    }
+  }
 }

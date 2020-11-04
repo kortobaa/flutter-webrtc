@@ -107,6 +107,8 @@ abstract class RTCPeerConnection {
 
   Future<bool> closeSender(RTCRtpSender sender);
 
+  Future<void> setVideoMaxBitRate(int maxBitRate);
+
   /// 'audio|video', { 'direction': 'recvonly|sendonly|sendrecv' }
   Future<RTCRtpTransceiver> addTransceiver(
       {MediaStreamTrack track,

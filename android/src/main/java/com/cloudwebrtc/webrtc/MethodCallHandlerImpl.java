@@ -595,6 +595,12 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
         }
         break;
       }
+      case "setVideoMaxBitRate": {
+        String peerConnectionId = call.argument("peerConnectionId");
+        final Integer maxBitRate = call.argument("maxBitRate");
+        setVideoMaxBitrate(peerConnectionId, maxBitRate, result);
+        break;
+      }
       case "rtpTransceiverSetDirection": {
         String peerConnectionId = call.argument("peerConnectionId");
         String direction = call.argument("direction");
@@ -1508,6 +1514,17 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
       } else {
         pco.closeSender(senderId, result);
       }
+  }
+
+  private void setVideoMaxBitrate(String peerConnectionId, Integer maxBitrateKbps, Result result) {
+    PeerConnectionObserver pco = mPeerConnectionObservers.get(peerConnectionId);
+    if (pco == null ||  pco.getPeerConnection() == null) {
+      Log.d(TAG, "addTransceiverOfType() peerConnection is null");
+      result.error("setVideoMaxBitrate", "setVideoMaxBitrate() peerConnection is null", null);
+      return;
+    }else {
+      pco.setVideoMaxBitrate(maxBitrateKbps,result);
+    }
   }
 
   public void addTrack(String peerConnectionId, String trackId, List<String> streamIds, Result result){
