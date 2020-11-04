@@ -320,4 +320,10 @@ class RTCPeerConnectionWeb extends RTCPeerConnection {
     // TODO: implement addTransceiver
     throw UnimplementedError();
   }
+
+  @override
+  Future<void> setVideoMaxBitRate(int maxBitRate) {
+    // TODO: implement setVideoMaxBitRate
+    throw UnimplementedError();
+  }
 }
